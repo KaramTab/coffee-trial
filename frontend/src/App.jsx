@@ -7,6 +7,7 @@ import OrderHistory from "./components/OrderHistory.jsx";
 import ParallaxBackdrop from "./components/ParallaxBackdrop.jsx";
 import ScrollProgress from "./components/ScrollProgress.jsx";
 import Hero from "./components/Hero.jsx";
+import Journey from "./components/Journey.jsx";
 
 // Presentation-only metadata keyed by drink id from the backend menu.
 const DRINK_META = {
@@ -120,6 +121,7 @@ function Storefront() {
         </header>
 
         <Hero />
+        <Journey />
 
         {menuError && (
           <div className="error-banner">

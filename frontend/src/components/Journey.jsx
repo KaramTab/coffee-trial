@@ -19,16 +19,16 @@ const STEPS = [
   },
 ];
 
-// Where each step card sits along the tall scroll track (percent).
-const STEP_POSITIONS = [5, 23, 41, 59];
+// Where each step branch sits along the tall scroll track (percent).
+const STEP_POSITIONS = [8, 22, 36, 50];
 // When the bean begins its final drop into the cup (scroll progress).
 const DROP_START = 0.8;
 
 /**
  * "The Journey" — a tall scroll track with a sticky stage pinned to the
- * viewport. The bean stays dead-center while the step cards scroll past it,
- * rotating slowly like a free fall. In the last stretch the bean sinks
- * behind the cup at the bottom of the stage.
+ * viewport. The bean stays dead-center while branch cards (alternating
+ * right/left, always visible) scroll past it, rotating slowly like a free
+ * fall. In the last stretch the bean sinks behind the cup at the bottom.
  */
 export default function Journey() {
   const sectionRef = useRef(null);
@@ -79,22 +79,6 @@ export default function Journey() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // Step cards live in the normal scroll flow — reveal them as they
-  // cross the middle of the viewport, where the bean waits.
-  useEffect(() => {
-    const steps = sectionRef.current.querySelectorAll(".journey-step");
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          entry.target.classList.toggle("visible", entry.isIntersecting);
-        }
-      },
-      { rootMargin: "-35% 0px -35% 0px" },
-    );
-    steps.forEach((s) => observer.observe(s));
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <section
       className="journey"
@@ -126,12 +110,12 @@ export default function Journey() {
         </div>
       </div>
 
-      {/* step cards scroll past the centered bean, alternating sides */}
+      {/* branch cards: always visible, alternating right then left */}
       {STEPS.map((step, i) => (
         <article
           key={step.title}
           className={
-            "journey-step " + (i % 2 === 0 ? "step-left" : "step-right")
+            "journey-step " + (i % 2 === 0 ? "step-right" : "step-left")
           }
           style={{ top: `${STEP_POSITIONS[i]}%` }}
         >
