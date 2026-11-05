@@ -1,0 +1,19 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+orders.db
+
+# Node
+node_modules/
+frontend/dist/
+
+# Misc
+.DS_Store
+*.log
+
+# unrelated workspace projects
+aura-home/
+calculator.html
+crm-kanban/
+karam-website/

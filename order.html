@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drink Order</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #f4f1ec;
+    color: #3b2f2f;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+  .container { width: 100%; max-width: 560px; }
+  h1 { font-size: 26px; margin-bottom: 4px; }
+  .subtitle { color: #8a7d7d; font-size: 14px; margin-bottom: 24px; }
+  .menu { display: flex; flex-direction: column; gap: 12px; }
+  .item {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .item-info { flex: 1; }
+  .item-name { font-size: 17px; font-weight: 600; }
+  .item-price { font-size: 14px; color: #8a7d7d; margin-top: 2px; }
+  .stepper { display: flex; align-items: center; gap: 10px; }
+  .stepper button {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid #d8cfc7;
+    background: #faf8f5;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    color: #3b2f2f;
+    transition: background 0.15s;
+  }
+  .stepper button:hover:not(:disabled) { background: #efe7df; }
+  .stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .qty { width: 34px; text-align: center; font-size: 16px; font-weight: 600; }
+  .footer {
+    margin-top: 28px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 16px;
+  }
+  .total-label { font-size: 15px; color: #8a7d7d; }
+  .total-value { font-size: 28px; font-weight: 700; }
+  .order-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background: #6f4e37;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .order-btn:hover { background: #5a3f2c; }
+  .order-btn:disabled { background: #b7a99a; cursor: not-allowed; }
+  #message {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
+    color: #2e6b4f;
+    min-height: 20px;
+  }
+  #message.error { color: #b0563a; }
+  .history { margin-top: 28px; }
+  .history h2 { font-size: 18px; margin-bottom: 12px; }
+  .history-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    font-size: 14px;
+  }
+  .history-card .top {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .history-card .when { color: #8a7d7d; font-weight: 400; font-size: 12px; }
+  .history-card ul { list-style: none; color: #5a4d4d; }
+  .history-card li { display: flex; justify-content: space-between; padding: 2px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Coffee Order</h1>
+  <p class="subtitle">Pick your drinks — quantity 0 to 20 per item</p>
+
+  <div class="menu" id="menu"></div>
+
+  <div class="footer">
+    <div class="total-row">
+      <span class="total-label">Total</span>
+      <span class="total-value" id="total">RM0.00</span>
+    </div>
+    <button class="order-btn" id="orderBtn" disabled>Place Order</button>
+    <p id="message"></p>
+  </div>
+
+  <div class="history">
+    <h2>My recent orders</h2>
+    <div id="history"></div>
+  </div>
+</div>
+
+<script>
+  const API = "http://127.0.0.1:8000";
+  const MIN_QTY = 0, MAX_QTY = 20;
+  let DRINKS = [];
+  const cart = {}; // in-memory cart: { drinkId: quantity }
+
+  const menuEl = document.getElementById("menu");
+  const totalEl = document.getElementById("total");
+  const orderBtn = document.getElementById("orderBtn");
+  const messageEl = document.getElementById("message");
+  const historyEl = document.getElementById("history");
+
+  const formatRM = amount => "RM" + Number(amount).toFixed(2);
+
+  function cartTotal() {
+    return DRINKS.reduce((sum, d) => sum + d.price * (cart[d.id] || 0), 0);
+  }
+
+  function cartCount() {
+    return DRINKS.reduce((sum, d) => sum + (cart[d.id] || 0), 0);
+  }
+
+  function setMessage(text, isError = false) {
+    messageEl.textContent = text;
+    messageEl.className = isError ? "error" : "";
+  }
+
+  function render() {
+    totalEl.textContent = formatRM(cartTotal());
+    orderBtn.disabled = cartCount() === 0;
+    DRINKS.forEach(d => {
+      const qty = cart[d.id] || 0;
+      document.getElementById("qty-" + d.id).textContent = qty;
+      document.getElementById("minus-" + d.id).disabled = qty <= MIN_QTY;
+      document.getElementById("plus-" + d.id).disabled = qty >= MAX_QTY;
+    });
+  }
+
+  function buildMenu() {
+    DRINKS.forEach(d => {
+      cart[d.id] = 0;
+      const item = document.createElement("div");
+      item.className = "item";
+      item.innerHTML = `
+        <div class="item-info">
+          <div class="item-name">${d.name}</div>
+          <div class="item-price">${formatRM(d.price)} / cup</div>
+        </div>
+        <div class="stepper">
+          <button id="minus-${d.id}" aria-label="Decrease ${d.name}">&minus;</button>
+          <span class="qty" id="qty-${d.id}">0</span>
+          <button id="plus-${d.id}" aria-label="Increase ${d.name}">+</button>
+        </div>`;
+      menuEl.appendChild(item);
+      item.querySelector("#minus-" + d.id).addEventListener("click", () => {
+        if ((cart[d.id] || 0) > MIN_QTY) { cart[d.id]--; render(); }
+      });
+      item.querySelector("#plus-" + d.id).addEventListener("click", () => {
+        if ((cart[d.id] || 0) < MAX_QTY) { cart[d.id]++; render(); }
+      });
+    });
+    render();
+  }
+
+  async function loadMenu() {
+    try {
+      const res = await fetch(API + "/api/menu");
+      if (!res.ok) throw new Error("menu request failed");
+      const data = await res.json();
+      DRINKS = data.menu;
+      buildMenu();
+    } catch (e) {
+      setMessage("Cannot reach the server at " + API + " — is it running?", true);
+    }
+  }
+
+  async function placeOrder() {
+    orderBtn.disabled = true;
+    setMessage("Placing order…");
+    try {
+      const items = DRINKS
+        .map(d => ({ drink_id: d.id, qty: cart[d.id] || 0 }))
+        .filter(it => it.qty > 0);
+      const res = await fetch(API + "/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || "order failed");
+      }
+      const order = await res.json();
+      setMessage(`Order #${order.order_id} placed — total ${formatRM(order.total)}`);
+      DRINKS.forEach(d => cart[d.id] = 0);
+      render();
+      loadHistory();
+    } catch (e) {
+      setMessage("Order failed: " + e.message, true);
+      orderBtn.disabled = false;
+    }
+  }
+
+  async function loadHistory() {
+    try {
+      const res = await fetch(API + "/api/orders");
+      if (!res.ok) return;
+      const data = await res.json();
+      historyEl.innerHTML = "";
+      if (data.orders.length === 0) {
+        historyEl.innerHTML = '<p style="color:#8a7d7d;font-size:14px;">No orders yet.</p>';
+        return;
+      }
+      data.orders.slice(0, 5).forEach(o => {
+        const card = document.createElement("div");
+        card.className = "history-card";
+        card.innerHTML = `
+          <div class="top">
+            <span>Order #${o.order_id}</span>
+            <span>${formatRM(o.total)}</span>
+          </div>
+          <div class="when">${o.created_at}</div>
+          <ul>
+            ${o.items.map(it => `<li><span>${it.drink_name} × ${it.qty}</span><span>${formatRM(it.subtotal)}</span></li>`).join("")}
+          </ul>`;
+        historyEl.appendChild(card);
+      });
+    } catch (e) {
+      /* history is non-critical for ordering */
+    }
+  }
+
+  orderBtn.addEventListener("click", placeOrder);
+
+  loadMenu();
+  loadHistory();
+</script>
+</body>
+</html>

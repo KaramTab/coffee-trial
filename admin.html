@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Staff — Order History</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #eef1f4;
+    color: #2b3440;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+  .container { width: 100%; max-width: 720px; }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  .subtitle { color: #7a8694; font-size: 14px; margin-bottom: 8px; }
+  .toolbar { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+  .refresh-btn {
+    padding: 8px 18px;
+    border: 1px solid #cdd6e0;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    color: #2b3440;
+  }
+  .refresh-btn:hover { background: #f4f7fa; }
+  .order-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    font-size: 15px;
+  }
+  .order-card .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .order-id { font-size: 17px; font-weight: 700; }
+  .order-total { font-size: 20px; font-weight: 700; color: #2e6b4f; }
+  .when { color: #7a8694; font-size: 13px; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid #eef2f6; }
+  th { color: #7a8694; font-weight: 600; font-size: 13px; }
+  td:last-child, th:last-child { text-align: right; }
+  .empty { color: #7a8694; font-size: 15px; }
+  .error { color: #b0563a; font-size: 15px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Staff — Order History</h1>
+  <p class="subtitle">All submitted orders (demo, no login)</p>
+  <div class="toolbar">
+    <button class="refresh-btn" id="refreshBtn">Refresh</button>
+  </div>
+  <div id="orders"></div>
+</div>
+
+<script>
+  const API = "http://127.0.0.1:8000";
+  const ordersEl = document.getElementById("orders");
+  const formatRM = amount => "RM" + Number(amount).toFixed(2);
+
+  async function loadOrders() {
+    ordersEl.innerHTML = '<p class="empty">Loading…</p>';
+    try {
+      const res = await fetch(API + "/api/orders");
+      if (!res.ok) throw new Error("request failed");
+      const data = await res.json();
+      ordersEl.innerHTML = "";
+      if (data.orders.length === 0) {
+        ordersEl.innerHTML = '<p class="empty">No orders yet.</p>';
+        return;
+      }
+      data.orders.forEach(o => {
+        const card = document.createElement("div");
+        card.className = "order-card";
+        card.innerHTML = `
+          <div class="top">
+            <span class="order-id">Order #${o.order_id}</span>
+            <span class="order-total">${formatRM(o.total)}</span>
+          </div>
+          <div class="when">${o.created_at}</div>
+          <table>
+            <tr><th>Item</th><th>Unit price</th><th>Qty</th><th>Subtotal</th></tr>
+            ${o.items.map(it => `
+              <tr>
+                <td>${it.drink_name}</td>
+                <td>${formatRM(it.unit_price)}</td>
+                <td>${it.qty}</td>
+                <td>${formatRM(it.subtotal)}</td>
+              </tr>`).join("")}
+          </table>`;
+        ordersEl.appendChild(card);
+      });
+    } catch (e) {
+      ordersEl.innerHTML = '<p class="error">Cannot reach the server — is it running?</p>';
+    }
+  }
+
+  document.getElementById("refreshBtn").addEventListener("click", loadOrders);
+  loadOrders();
+</script>
+</body>
+</html>
